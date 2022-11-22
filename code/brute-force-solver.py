@@ -36,7 +36,8 @@ def ring(nodes):
         j = (i + 1) % n
         u = nodes[i]
         v = nodes[j]
-        A[u,v] = A[v,u] = 1 # connect nodes[i] to nodes[j]
+        # connect nodes[i] to nodes[j]
+        A[u,v] = A[v,u] = 1
     return A
 
 def enumerate_all_rings(n):
