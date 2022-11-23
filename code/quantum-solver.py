@@ -21,14 +21,14 @@ from dwave.system.samplers import DWaveSampler
 import dwave.inspector
 import time
 
-__author__     = "Siddharth Jain"
-__copyright__  = "Copyright 2021, Johnson & Johnson"
-__credits__    = ["Siddharth Jain"]
+__author__     = "Thierry Daubos"
+__copyright__  = "Copyright 2022, Scalian DS"
+__credits__    = ["Thierry Daubos"]
 __license__    = "Apache 2.0"
-__version__    = "1.0.1"
-__maintainer__ = "Siddharth Jain"
-__email__      = "sjain68@its.jnj.com"
-__status__     = "Production"
+__version__    = "1.0.0"
+__maintainer__ = "Thierry Daubos"
+__email__      = "thierry.daubos@scalian.com"
+__status__     = "Development"
 
 def index(i, j, n):
     if i == j:
