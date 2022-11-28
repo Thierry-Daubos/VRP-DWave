@@ -15,11 +15,11 @@ Prerequisites:
 
 import numpy as np
 import sys
+import time
+import dwave.inspector
 from dwave.embedding.chain_strength import scaled
 from dwave.system.composites import EmbeddingComposite
 from dwave.system.samplers import DWaveSampler
-import dwave.inspector
-import time
 
 __author__     = "Thierry Daubos"
 __copyright__  = "Copyright 2022, Scalian DS"
@@ -102,8 +102,8 @@ def build_solution(sample):
 def score(M, X):
     return np.sum(np.multiply(M, X))    
 
-in_file = sys.argv[1]
-out_file = sys.argv[2]
+in_file     = sys.argv[1]
+out_file    = sys.argv[2]
 num_samples = 100
 
 # the matrix of paiwise costs (cost to travel from node i to node j)
@@ -125,7 +125,7 @@ qubo = Q + lagrange_multiplier * C
 sampler = EmbeddingComposite(DWaveSampler()) 
 
 t0        = time.perf_counter()
-sampleset = sampler.sample_qubo(qubo, num_reads=num_samples, chain_strength=scaled)
+sampleset = sampler.sample_qubo(qubo, num_reads = num_samples, chain_strength = scaled)
 t1        = time.perf_counter()
 
 dwave.inspector.show(sampleset)
