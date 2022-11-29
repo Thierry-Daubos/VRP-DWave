@@ -27,8 +27,8 @@ __credits__    = ["Thierry Daubos"]
 __license__    = "Apache 2.0"
 __version__    = "1.0.0"
 __maintainer__ = "Thierry Daubos"
-__email__      = "Thierry Daubos.com"
-__status__     = "Production"
+__email__      = "thierry.daubos@scalian.com"
+__status__     = "developpment"
 
 def index(i, j, n):
     if i == j:
@@ -145,6 +145,7 @@ t1        = time.perf_counter()
 '''
 *** Show solution results and compute metrics ***
 '''
+
 dwave.inspector.show(sampleset)
 
 have_solution  = False

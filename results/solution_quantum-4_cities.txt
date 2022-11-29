@@ -1,0 +1,15 @@
+Problem Id: 9e1ca9e8-0fc8-4dc8-9c23-a35c6762600e
+Solution:
+[[0. 0. 1. 1.]
+ [0. 0. 1. 1.]
+ [1. 1. 0. 0.]
+ [1. 1. 0. 0.]]
+Score: 5323.0
+{0: 0, 1: 1, 2: 1, 3: 1, 4: 1, 5: 0}
+index: 4
+energy: -27093.0
+num_occurrences: 13
+chain break fraction: 0.0
+chain strength: 2885.5
+lagrange multiplier: 1013
+Time: 0.0568 s

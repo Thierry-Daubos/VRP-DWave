@@ -1,0 +1,15 @@
+Problem Id: da42805f-ce3e-479a-b985-1d3c311573dd
+Solution:
+[[0. 0. 1. 1.]
+ [0. 0. 1. 1.]
+ [1. 1. 0. 0.]
+ [1. 1. 0. 0.]]
+Score: 5162.0
+{0: 0, 1: 1, 2: 1, 3: 1, 4: 1, 5: 0}
+index: 0
+energy: -12774.0
+num_occurrences: 33
+chain break fraction: 0.0
+chain strength: 824.5
+lagrange multiplier: 1121
+Time: 0.0619 s
