@@ -13,6 +13,7 @@ import time
 import math
 import random
 import copy
+import itertools
 
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -46,30 +47,7 @@ def index(i, j, n):
     elif i > j:
         return index(j, i, n)
     else:
-        return int(i*n - i*(i+1)/2 + j - (i+1))
-
-def build_constraint_matrix(n):
-    """
-     The constraint matrix encodes the constraint that each city (node) is connected to exactly two other cities in the output cycle        
-    """
-    m = int(n*(n-1)/2)
-    C = np.zeros((m,m))
-    for i in range(0, n):
-        # diagonal terms of C (these are equal to -6)
-        for j in range(0, n):
-            if i == j:
-                continue
-            k = index(i, j, n)
-            C[k,k] += -5
-        # off diagonal terms (these have a bizzare pattern)
-        for a in range(0, n):
-            for b in range(0, n):
-                if a == b or a == i or b == i:
-                    continue
-                ia = index(i,a,n)
-                ib = index(i,b,n)
-                C[ia,ib] += 1
-    return C
+        return int(i*n - (i*(i+1)/2) + j - (i+1))
 
 def build_objective_matrix(M):
     n, _ = M.shape
@@ -87,16 +65,45 @@ def build_objective_matrix(M):
     return Q
 
 def build_decode(M, city_names):
-    n, _ = M.shape
-    # m is the total of binary variables we have to solve for
-    # basically given any two nodes, we need to decide if there is an edge connecting them (a binary variable)
-    k = 0
+    '''
+    Build a dictionnary of correspondances between edges index and connected cities
+    Used for decoding the QPU solution returned
+    '''
+    n, _   = M.shape
+    k      = 0
     decode = dict()
+    
     for i in range(0, n):
         for j in range(i+1, n):
             decode[k] = [city_names[i], city_names[j]]
             k += 1
     return decode
+
+def build_constraint_matrix(n):
+    """
+     The constraints matrix encodes the constraint that each city (node) is connected to exactly two other cities in the output cycle        
+    """
+    m          = int(n*(n-1)/2)
+    C          = np.zeros((m,m))
+    bias_value = -5
+    for i in range(0, n):
+        # Diagonal terms of C are equal to 2*bias_value
+        for j in range(0, n):
+            if i == j:
+                continue
+            k = index(i, j, n)
+            C[k,k] += bias_value
+            
+        # Off diagonal terms (the pattern for these elements is strange)
+        for a in range(0, n):
+            for b in range(0, n):
+                if a == b or a == i or b == i:
+                    continue
+                ia = index(i,a,n)
+                ib = index(i,b,n)
+                print("i : ", i, " a : ", a, " b : ", b, " index(", i,",",a,") :", ia, " index(",i,",",b,") :", ib)
+                C[ia,ib] += 1
+    return C
 
 def is_valid_solution(X):
     rows, cols = X.shape
@@ -125,6 +132,26 @@ def build_solution(sample):
 def score(M, X):
     return np.sum(np.multiply(M, X))
 
+def ring(nodes):
+    ''' Creates a ring from input list that tells which node is connect to which. The input list should be thought of as a ring or cycle. '''
+    n = len(nodes)
+    A = np.zeros((n,n))
+    for i in range(n):
+        j = (i + 1) % n
+        u = nodes[i]
+        v = nodes[j]
+        # connect nodes[i] to nodes[j]
+        A[u,v] = A[v,u] = 1
+    return A
+
+def enumerate_all_rings(n):
+    ''' Enumerate all combinations that traverse the n cities (nodes). N° of combinations is (n-1)!/2 '''
+    for p in itertools.permutations(range(n-1)):
+        if p[0] <= p[-1]:
+            # add the n-th element to the array
+            nodes = list(p)
+            nodes.append(n-1)
+            yield ring(nodes)
 
 '''
 # Read date file of cities
@@ -185,11 +212,11 @@ df = df.astype(int)
 
 scaler = MinMaxScaler(feature_range=(0, 10))
 df     = scaler.fit_transform(df)
-# df       = df.to_numpy()
+# df   = df.to_numpy()
 
-# in_file  = "D:/Documents/Scalian/Quantum_Computing_2022/VRP-DWave/data/problem1.txt"
-out_file = "D:/Documents/Scalian/Quantum_Computing_2022/VRP-DWave/results/solution_quantum-5_cities.txt"
-
+out_file        = "D:/Documents/Scalian/Quantum_Computing_2022/VRP-DWave/results/solution_quantum-"+str(Nb_cities)+"_cities.txt"
+out_file_BF     = "D:/Documents/Scalian/Quantum_Computing_2022/VRP-DWave/results/solution_BF-"     +str(Nb_cities)+"_cities.txt"
+out_file_BF_all = "D:/Documents/Scalian/Quantum_Computing_2022/VRP-DWave/results/solution_BF_all-" +str(Nb_cities)+"_cities.txt"
 num_samples = 1000
 
 '''
@@ -307,6 +334,74 @@ print("The quantum route of the traveller is :")
 for i in route[:-1]:
     print(city_names[i], " -> ", end = '')
 print(city_names[0])
+
+''' Compute problem's solution by 'brute-force' algorithm '''
+
+k                 = 0
+best_matrix       = np.zeros((n,n))
+best_score        = np.inf
+second_best_score = np.inf
+unique_solutions  = []
+
+t0 = time.perf_counter()
+with open(out_file_BF_all, 'w') as f:
+    for A in enumerate_all_rings(n):
+        # 'multiply' does element-wise multiplication (i.e. indivual edge cost)
+        # 'sum' will sum the costs over all edges of the cycle
+        score = np.sum(np.multiply(M, A))
+        f.write("{0} {1} {2}\n".format(k, score, [A]))
+        k +=1
+        if score == best_score:
+            unique_solutions.append(A)
+        elif score < best_score:
+            second_best_score = best_score
+            best_score        = score
+            best_matrix       = A
+            unique_solutions  = [A]
+        elif score < second_best_score:
+            second_best_score = score
+t1 = time.perf_counter()
+
+with open(out_file_BF, 'w') as f:
+    f.write("Best score: {0}\n".format(best_score))
+    f.write("Number of distinct solutions: {0}\n".format(len(unique_solutions)))
+    for solution in unique_solutions:
+        f.write("{0}\n".format(solution))
+    f.write("Second best score: {0}\n".format(second_best_score))
+    f.write("Energy difference: {0}\n".format(best_score - second_best_score))
+    f.write(f"Time: {t1-t0:0.4f} s\n")
+
+BF_route = unique_solutions[0]
+for i, edge in enumerate(BF_route):
+    print("i : ", i, " edge : ", edge)
+
+# decoding needs to be adapted to routes encoded as a (n_cities x n_cities) matrix
+
+BF_route = list()
+BF_route.append(city_names.index(edge_list[0][0]))
+BF_route.append(city_names.index(edge_list[0][1]))
+firt_city = edge_list[0][0]
+next_city = edge_list[0][1]
+edge_list.pop(0)
+
+while len(edge_list) > 1:
+    for i, edge in enumerate(edge_list):
+        if next_city in edge:
+            if next_city != edge_list[i][0]:
+                BF_route.append(city_names.index(edge_list[i][0]))
+                next_city = edge_list[i][0]
+            else:
+                BF_route.append(city_names.index(edge_list[i][1]))
+                next_city = edge_list[i][1]
+            edge_list.pop(i)
+BF_route.append(city_names.index(firt_city))
+
+print("The brute-force route of the traveller is :")
+for i in BF_route[:-1]:
+    print(city_names[i], " -> ", end = '')
+print(city_names[0])
+#
+
 
 '''
 # Get locations Lon/Lat coordinates

@@ -1,0 +1,10 @@
+Best score: 55.77017425995349
+Number of distinct solutions: 1
+[[0. 1. 0. 1. 0.]
+ [1. 0. 0. 0. 1.]
+ [0. 0. 0. 1. 1.]
+ [1. 0. 1. 0. 0.]
+ [0. 1. 1. 0. 0.]]
+Second best score: 56.01809948091132
+Energy difference: -0.24792522095782488
+Time: 0.0074 s
