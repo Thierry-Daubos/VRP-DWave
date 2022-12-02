@@ -1,0 +1,22 @@
+Problem Id: a3ac3725-5bbc-469a-acf0-84eb2f91b1d5
+Solution:
+[[0. 0. 1. 0. 0. 1.]
+ [0. 0. 0. 1. 1. 0.]
+ [1. 0. 0. 0. 0. 1.]
+ [0. 1. 0. 0. 1. 0.]
+ [0. 1. 0. 1. 0. 0.]
+ [1. 0. 1. 0. 0. 0.]]
+Score: 29.889764397386475
+{0: 0, 1: 1, 2: 0, 3: 0, 4: 1, 5: 0, 6: 1, 7: 1, 8: 0, 9: 0, 10: 0, 11: 1, 12: 1, 13: 0, 14: 0}
+index: 0
+energy: -120.1102356026135
+num_occurrences: 126
+chain break fraction: 0.0
+scaling_factor M: 5.0
+bias_value     C: -3.5
+lagrange_multiplier: 5.0
+chain strength: 7.5
+scaling_factor M: 5.0
+bias_value     C: -3.5
+lagrange_multiplier: 5.0
+Time: 0.1487 s
