@@ -191,7 +191,7 @@ def cycle2solution(cycle):
     
     return sol
             
-def decode_BF_route(solution):
+def decode_route(solution):
     ''' decode Brute Force solution into route '''
     
     edge_list = list()
@@ -235,7 +235,7 @@ def trunc(values, decs=0):
     return np.trunc(values*10**decs)/(10**decs)
 
 global COMPUTE_QUANTUM
-COMPUTE_QUANTUM = False
+COMPUTE_QUANTUM = True
 
 '''
 # Read date file of cities
@@ -266,7 +266,7 @@ max_lon = max(lons)+ offset
 min_lat = min(lats)- offset
 max_lat = max(lats)+ offset
 
-Nb_cities = 9
+Nb_cities = 5
 random.seed(0)
 
 cities_keep    = random.sample(city_names, Nb_cities)
@@ -311,9 +311,7 @@ bias_value = -3.5
 lagrange_multiplier = np.max(np.abs(df))
 
 # Number of measurements repetition (up to 10000)
-num_samples = 1000
-
-
+num_samples      = 1000
 out_file         = "D:/Documents/Scalian/Quantum_Computing_2022/VRP-DWave/results/solution_quantum-"+str(Nb_cities)+"_cities.txt"
 out_file_BF      = "D:/Documents/Scalian/Quantum_Computing_2022/VRP-DWave/results/solution_BF-"     +str(Nb_cities)+"_cities.txt"
 out_file_BF_all  = "D:/Documents/Scalian/Quantum_Computing_2022/VRP-DWave/results/solution_BF_all-" +str(Nb_cities)+"_cities.txt"
@@ -342,6 +340,28 @@ C          = build_constraint_matrix(n, bias_value)
 '''
 qubo = Q + lagrange_multiplier * C
 
+'''
+H = HA + HB
+HA : Hamiltonian component corresponding to the (directed or undirected) Hamiltonian cycle problem
+HB : Hamiltonian component corresponding to the Weighted graph problem
+HA = A . term_1 + A term_2 + A term-3
+NB = B . term_4
+B sould be small enough i.e. 0 < B max(Wuv) < A
+so that no solution can favour to violate the constraints of HA
+
+term_1 : constraint that every vertex can only appear once in a cycle      (i.e. all nodes must be visited at most once)
+term_2 : constraint that "there must be a jth node in the cyle for each j" (i.e. all nodes need to be visited at least once)
+term_3 : if Xu,j and Xv,j+1 are both 1 then there should be an energie penalty if (u,v) is not in the edgeset of the graph
+    
+In the implementation :
+    
+M                  <-> Wuv
+Q                  <-> HA
+C                  <-> HB
+lagrange_mutiplier <-> (B/A)
+qubo               <-> H
+'''
+
 print("Cost matrix M        : \n", M, "\n")
 print("Objective matrix Q   : \n", Q, "\n")
 print("Lagrange multiplier  : \n", lagrange_multiplier, "\n")
@@ -367,8 +387,7 @@ sampler = EmbeddingComposite(DWaveSampler())
 '''
 *** Run the problem on the QPU recording execution times
 '''
-have_solution  = False
-
+have_solution      = False
 if COMPUTE_QUANTUM:
     t0        = time.perf_counter()
     sampleset = sampler.sample_qubo(qubo, num_reads=num_samples, chain_strength=scaled)    
@@ -382,43 +401,57 @@ if COMPUTE_QUANTUM:
     # print(sampleset.info["timing"])
     print(sampleset.info["embedding_context"])
     
-    dwave.inspector.show(sampleset)
-    
-    problem_id     = sampleset.info['problem_id']
-    chain_strength = sampleset.info['embedding_context']['chain_strength']
-    
+    dwave.inspector.show(sampleset)    
+    problem_id         = sampleset.info['problem_id']
+    chain_strength     = sampleset.info['embedding_context']['chain_strength']
+    Q_correct_solution = list()
+    Total_correc       = 0
+
     with open(out_file, 'w') as f:
         f.write(f"Problem Id: {problem_id}\n") # does not depend on sample  
         count = 0
+        
         for e in sampleset.data(sorted_by='energy', sample_dict_cast = False):
-            sample               = e.sample
-            energy               = e.energy
-            num_occurrences      = e.num_occurrences
-            chain_break_fraction = e.chain_break_fraction
-            X                    = build_solution(sample)
+            X = build_solution(e.sample)
             
-            if is_valid_solution(X):
-                have_solution = True
-                score         = compute_score(M, X)
+            if is_valid_solution(X) and not have_solution:
+                have_solution             = True
+                score_best                = compute_score(M, X)
+                solution_best             = X
+                sample_best               = e.sample
+                energy_best               = e.energy
+                num_cocurrences_best      = e.num_occurrences
+                chain_break_fraction_best = e.chain_break_fraction
                 f.write("Solution:\n")
-                f.write(f"{X}\n")
-                f.write(f"Score: {score}\n")
-                f.write(f"{sample}\n")
+                f.write(f"{solution_best}\n")
+                f.write(f"Score: {score_best}\n")
+                f.write(f"{sample_best}\n")
                 f.write(f"index: {count}\n")
-                f.write(f"energy: {energy}\n")
-                f.write(f"num_occurrences: {num_occurrences}\n")            
-                f.write(f"chain break fraction: {chain_break_fraction}\n")
+                f.write(f"energy: {energy_best}\n")
+                f.write(f"num_occurrences: {num_cocurrences_best}\n")            
+                f.write(f"chain break fraction: {chain_break_fraction_best}\n")
                 f.write(f"scaling_factor M: {scaling_factor}\n")
                 f.write(f"bias_value     C: {bias_value}\n")
                 f.write(f"lagrange_multiplier: {lagrange_multiplier}\n")
                
-                break   # break out of for loop
+                # break   # break out of for loop (if only looking for the first correct solution)
+            
+            if is_valid_solution(X): 
+                Q_route = decode_route(X)
+                score   = compute_score(M, X)
+                for i in range(e.num_occurrences):
+                    Q_sol = {'route': Q_route, 'score Quantum': score, 'energie': e.energy, "solution": X, "chain_break_fraction": e.chain_break_fraction}
+                    Q_correct_solution.append(Q_sol)
+                Total_correc += e.num_occurrences
             count += 1
             
+        Percentage_correct_routes = (Total_correc/num_samples)*100.
+        
         f.write(f"chain strength: {chain_strength}\n")  # does not depend on sample        
         f.write(f"scaling_factor M: {scaling_factor}\n")
         f.write(f"bias_value     C: {bias_value}\n")
         f.write(f"lagrange_multiplier: {lagrange_multiplier}\n")
+        f.write(f"Percentage correct routes : {Percentage_correct_routes}\n")
         f.write(f"Time: {t1-t0:0.4f} s\n")
         
         if not have_solution:
@@ -428,9 +461,12 @@ if COMPUTE_QUANTUM:
             f.write("did not find any solution\n")
             f.write(f"chain break fraction: {chain_break_fraction}\n")
 
+
+
 if COMPUTE_QUANTUM and have_solution:
-    # quantum_route = decode_quantum_route(sample)
-    quantum_route   = decode_BF_route(X)
+    quantum_route   = decode_route(solution_best)
+
+print("Quantum percentage of correct solutions : ", Percentage_correct_routes)
 
 ''' Compute problem's solution by 'brute-force' algorithm '''
 k                    = 0
@@ -447,7 +483,7 @@ with open(out_file_BF_all, 'w') as f:
         # 'multiply' does element-wise multiplication (i.e. indivual edge cost)
         # 'sum' will sum the costs over all edges of the cycle
         score = np.sum(np.multiply(M, A))
-        route = decode_BF_route(A)
+        route = decode_route(A)
         f.write("{0} {1}\n".format(k, score))
         f.write("{0} \n".format(route))
         f.write("{0} \n".format([A]))
@@ -489,7 +525,7 @@ with open(out_file_BF, 'w') as f:
 
 solution = unique_solutions[0]
 
-BF_route = decode_BF_route(solution)
+BF_route = decode_route(solution)
 
 '''
 # Get locations Lon/Lat coordinates
@@ -522,7 +558,6 @@ m = Basemap(projection ='merc',
 # m.arcgisimage(service='ESRI_Imagery_World_2D', xpixels = 2000, verbose= True)
 # m.arcgisimage(server='http://server.arcgisonline.com/ArcGIS', service = 'World_Topo_Map', xpixels = 1000, verbose=True)
 m.arcgisimage(server='http://server.arcgisonline.com/ArcGIS', service='World_Imagery', verbose = False)
-
 
 m.drawrivers(    linewidth=1.0, linestyle='solid', color='seagreen' , antialiased=1, ax=None, zorder = 1)
 m.drawcoastlines(linewidth=1.0, linestyle='solid', color='steelblue', antialiased=1, ax=None, zorder = 2)
@@ -576,10 +611,14 @@ nx.draw_networkx_edge_labels(G, pos, edge_labels, font_size = 8, font_family = "
 
 ''' Compute problem's solution using 'Simulated Annealing' approximate algorithm '''
 # cycle = nx_app.christofides(G, weight="weight")
-N_repeat_SA = 500
+N_repeat_SA = 10
+Temp        = 100
+N_inner     = 1000
+Alpha       = 0.005
+
 cycles_SA = []
 for i in range(N_repeat_SA):
-    cycle    = nx_app.simulated_annealing_tsp(G, init_cycle = "greedy", weight="weight", temp = 100, move='1-1', source = 0, max_iterations = 10, N_inner=1000, alpha=0.005, seed=None)
+    cycle    = nx_app.simulated_annealing_tsp(G, init_cycle = "greedy", weight="weight", temp = Temp, move='1-1', source = 0, max_iterations = 10, N_inner = N_inner, alpha = Alpha, seed=None)
     # cycle    = nx_app.simulated_annealing_tsp(G, init_cycle = "greedy", weight="weight", temp = 100, move='1-1', source = 0, max_iterations = 2, N_inner=10, alpha=0.01, seed=None)
 
     try:
@@ -591,7 +630,7 @@ for i in range(N_repeat_SA):
     # print("Ith :", i, " Simulated Annealing route score : ", best_score_SA)    
     cycles_SA.append({"cycle": cycle, "score SA": best_score_SA})
     
-df_SA = pd.DataFrame (cycles_SA, columns = ["cycle","score SA"])
+spectrum_SA = pd.DataFrame (cycles_SA, columns = ["cycle","score SA"])
 
 
 ''' Reverse Christofides route if opposite to quantum route '''
@@ -652,15 +691,18 @@ plt.show()
 
 fig, ax = plt.subplots(1, 1, figsize=(20, 15))
 
-normalized_df_SA_score = pd.DataFrame((df_SA["score SA"] - spec_min) / (spec_max - spec_min))
+normalized_spectrum_SA = pd.DataFrame((spectrum_SA["score SA"] - spec_min) / (spec_max - spec_min))
 # spectrum_BF = normalized_spectrum_brute_force.plot.hist(ax = ax, column = "score BF", color='slategrey', grid = True, bins = nb_bin)
 # spectrum_SA = normalized_df_SA_score.plot.hist(ax = ax, column = "score SA", color='mediumblue', grid = True, bins = nb_bin)
 
-concat = pd.concat([normalized_spectrum_brute_force["score BF"], normalized_df_SA_score["score SA"]], axis=1)
-# concat.plot.hist(ax = ax, column = ["score BF", "score SA"], color=['slategrey', 'mediumblue'], grid = True, bins = nb_bin, alpha = 0.5, density = True)
-concat.plot.hist(ax = ax, column = ["score BF", "score SA"], color=['slategrey', 'mediumblue'], grid = True, bins = nb_bin, alpha = 0.5)
+spectrum_Qantum = pd.DataFrame(Q_correct_solution, columns = ["score Quantum", "solution"])
+normalized_spectrum_Qantum = pd.DataFrame((spectrum_Qantum["score Quantum"] - spec_min) / (spec_max - spec_min))
 
-ax.set_title("Brute-force normalized score distribution")
+concat = pd.concat([normalized_spectrum_brute_force["score BF"], normalized_spectrum_SA["score SA"], normalized_spectrum_Qantum["score Quantum"]], axis=1)
+concat.plot.hist(ax = ax, column = ["score BF", "score SA", "score Quantum"], color=['slategrey', 'mediumblue', "red"], grid = True, bins = nb_bin, alpha = 0.5, density = True)
+# concat.plot.hist(ax = ax, column = ["score BF", "score SA", "score Quantum"], color=['slategrey', 'mediumblue', "red"], grid = True, bins = nb_bin, alpha = 0.5)
+
+ax.set_title("Normalized score distributions")
 ax.set_xlabel("Cycle scores", labelpad=20, weight='bold', size=12)
 ax.set_ylabel("Counts"      , labelpad=20, weight='bold', size=12)
 
@@ -669,11 +711,54 @@ ax.axvspan(score_BF, score_BF + spectrum_res, color='green'     , alpha=0.4)
 # score_SA = trunc((best_score_SA - spec_min) / (spec_max - spec_min), decs = round_digit)
 # ax.axvspan(score_SA, score_SA + spectrum_res, color='mediumblue', alpha=0.5)
 
-SA_patch = mpatches.Patch(color="mediumblue", alpha=0.6, label="Simulated Annealing best score")
+SA_patch = mpatches.Patch(color="mediumblue", alpha=0.6, label="Simulated Annealing scores")
 BF_patch = mpatches.Patch(color="green"     , alpha=0.4, label="Brute-Force best score")
-ax.legend(handles=[SA_patch, BF_patch])
+Q_patch  = mpatches.Patch(color="red"       , alpha=0.4, label="Quantum Annealing scores")
+ax.legend(handles=[SA_patch, BF_patch, Q_patch])
 
 plt.tight_layout()
 fig.savefig(out_file_BF_spec)
 plt.show()
 
+'''********************'''
+
+spectrum_SA                = pd.DataFrame (cycles_SA, columns = ["cycle","score SA"])
+normalized_spectrum_SA     = pd.DataFrame((spectrum_SA["score SA"] - spec_min) / (spec_max - spec_min))
+
+spectrum_Qantum            = pd.DataFrame(Q_correct_solution, columns = ["score Quantum", "solution"])
+normalized_spectrum_Qantum = pd.DataFrame((spectrum_Qantum["score Quantum"] - spec_min) / (spec_max - spec_min))
+
+# spectrum_BF = normalized_spectrum_brute_force.plot.hist(ax = ax, column = "score BF", color='slategrey', grid = True, bins = nb_bin)
+# spectrum_SA = normalized_df_SA_score.plot.hist(ax = ax, column = "score SA", color='mediumblue', grid = True, bins = nb_bin)
+concat                     = pd.concat([normalized_spectrum_brute_force["score BF"], normalized_spectrum_SA["score SA"], normalized_spectrum_Qantum["score Quantum"]], axis=1)
+
+plt.title(G.name)
+plt.tight_layout()
+plt.show()
+
+'''********************'''
+
+fig, ax = plt.subplots(1, 1, figsize=(20, 15))
+
+# ax.hist(normalized_spectrum_brute_force["score BF"], bins = nb_bin, alpha = 0.5, range=[0., 1.0], density = True, histtype='bar', color='slategrey' , label="Brute-Force best score")
+# ax.hist(normalized_spectrum_SA["score SA"]         , bins = nb_bin, alpha = 0.5, range=[0., 1.0], density = True, histtype='bar', color='mediumblue', label="Simulated Annealing scores")
+# ax.hist(normalized_spectrum_Qantum["score Quantum"], bins = nb_bin, alpha = 0.5, range=[0., 1.0], density = True, histtype='bar', color='red'       , label="Quantum Annealing scores")
+
+# Make a multiple-histogram of data-sets with different length.
+x_multi = [normalized_spectrum_brute_force["score BF"], normalized_spectrum_SA["score SA"], normalized_spectrum_Qantum["score Quantum"]]
+# ax.hist(x_multi, bins = 100, alpha = 0.5, range=[0., 1.0], density = True)
+ax.hist(x_multi, bins = nb_bin , alpha = 0.5, density=True, stacked=False, color=['slategrey','mediumblue','red'], label=["Brute-Force best score","Simulated Annealing scores","Quantum Annealing scores"])
+
+ax.set_title("Normalized score distributions")
+ax.set_xlabel("Cycle scores", labelpad=20, weight='bold', size=12)
+ax.set_ylabel("Counts"      , labelpad=20, weight='bold', size=12)
+
+score_BF = trunc((best_score_BF - spec_min) / (spec_max - spec_min), decs = round_digit)
+ax.axvspan(0., (1./nb_bin), color='green', alpha=0.2)
+# score_SA = trunc((best_score_SA - spec_min) / (spec_max - spec_min), decs = round_digit)
+# ax.axvspan(score_SA, score_SA + spectrum_res, color='mediumblue', alpha=0.5)
+
+plt.legend(loc='upper right')
+plt.tight_layout()
+fig.savefig(out_file_BF_spec)
+plt.show()

@@ -8,4 +8,4 @@ Best route: [0, 1, 4, 2, 3, 0]
  [0. 1. 1. 0. 0.]]
 Second best score: 28.00904974045566
 Energy difference: -0.12396261047891244
-Time: 0.0096 s
+Time: 0.0070 s
