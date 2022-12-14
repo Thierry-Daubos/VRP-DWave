@@ -51,6 +51,7 @@ def build_constraint_matrix(n):
                 continue
             k = index(i, j, n)
             C[k,k] += -3
+            
         # off diagonal terms (these have a bizzare pattern)
         for a in range(0, n):
             for b in range(0, n):

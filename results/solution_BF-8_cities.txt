@@ -1,4 +1,4 @@
-Best score: 32.08457955008397
+Best score: 6.416915910016796
 Number of distinct solutions: 1
 Best route: [0, 2, 4, 1, 6, 5, 7, 3, 0]
 [[0. 0. 1. 1. 0. 0. 0. 0.]
@@ -9,6 +9,6 @@ Best route: [0, 2, 4, 1, 6, 5, 7, 3, 0]
  [0. 0. 0. 0. 0. 0. 1. 1.]
  [0. 1. 0. 0. 0. 1. 0. 0.]
  [0. 0. 0. 1. 0. 1. 0. 0.]]
-Second best score: 32.310922501904244
-Energy difference: -0.2263429518202713
-Time: 1.3760 s
+Second best score: 6.4621845003808485
+Energy difference: -0.04526859036405284
+Time: 1.2320 s

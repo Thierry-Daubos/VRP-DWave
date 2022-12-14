@@ -1,11 +1,12 @@
-Best score: 31.261490885833148
+Best score: 6.2522981771666295
 Number of distinct solutions: 1
+Best route: [0, 2, 1, 4, 3, 5, 0]
 [[0. 0. 1. 0. 0. 1.]
  [0. 0. 1. 0. 1. 0.]
  [1. 1. 0. 0. 0. 0.]
  [0. 0. 0. 0. 1. 1.]
  [0. 1. 0. 1. 0. 0.]
  [1. 0. 0. 1. 0. 0.]]
-Second best score: 31.48783383765341
-Energy difference: -0.2263429518202642
-Time: 0.0224 s
+Second best score: 6.297566767530682
+Energy difference: -0.04526859036405284
+Time: 0.0502 s

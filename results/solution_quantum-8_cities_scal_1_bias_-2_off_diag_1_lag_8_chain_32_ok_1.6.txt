@@ -1,0 +1,26 @@
+Problem Id: 7f33b503-7765-4c01-b300-914d6f57cfc3
+Solution:
+[[0. 0. 1. 0. 0. 1. 0. 0.]
+ [0. 0. 0. 0. 1. 0. 1. 0.]
+ [1. 0. 0. 0. 0. 0. 0. 1.]
+ [0. 0. 0. 0. 1. 0. 0. 1.]
+ [0. 1. 0. 1. 0. 0. 0. 0.]
+ [1. 0. 0. 0. 0. 0. 1. 0.]
+ [0. 1. 0. 0. 0. 1. 0. 0.]
+ [0. 0. 1. 1. 0. 0. 0. 0.]]
+Score: 7.248523782042939
+{0: 0, 1: 1, 2: 0, 3: 0, 4: 1, 5: 0, 6: 0, 7: 0, 8: 0, 9: 1, 10: 0, 11: 1, 12: 0, 13: 0, 14: 0, 15: 0, 16: 0, 17: 1, 18: 1, 19: 0, 20: 0, 21: 1, 22: 0, 23: 0, 24: 0, 25: 1, 26: 0, 27: 0}
+index: 95
+energy: -120.75147621795708
+num_occurrences         : 1
+chain break fraction    : 0.0
+scaling_factor M        : 1.0
+bias_value used for C   : -2.0
+off_diag_bias used for C: 1.0
+lagrange_multiplier     : 8.0
+chain strength: 32.0
+scaling_factor M: 1.0
+bias_value     C: -2.0
+lagrange_multiplier: 8.0
+Percentage correct routes : 1.6
+Time: 0.9543 s

@@ -1,0 +1,24 @@
+Problem Id: d487c3c6-2ef1-40c5-a23e-4b8f98abf033
+Solution:
+[[0. 1. 1. 0. 0. 0.]
+ [1. 0. 0. 1. 0. 0.]
+ [1. 0. 0. 0. 0. 1.]
+ [0. 1. 0. 0. 1. 0.]
+ [0. 0. 0. 1. 0. 1.]
+ [0. 0. 1. 0. 1. 0.]]
+Score: 6.478333769762966
+{0: 1, 1: 1, 2: 0, 3: 0, 4: 0, 5: 0, 6: 1, 7: 0, 8: 0, 9: 0, 10: 0, 11: 1, 12: 1, 13: 0, 14: 1}
+index: 660
+energy: -233.52166623023703
+num_occurrences         : 1
+chain break fraction    : 0.0
+scaling_factor M        : 1.0
+bias_value used for C   : -5.0
+off_diag_bias used for C: 1.0
+lagrange_multiplier     : 5.0
+chain strength: 50.0
+scaling_factor M: 1.0
+bias_value     C: -5.0
+lagrange_multiplier: 5.0
+Percentage correct routes : 0.4
+Time: 0.1415 s
