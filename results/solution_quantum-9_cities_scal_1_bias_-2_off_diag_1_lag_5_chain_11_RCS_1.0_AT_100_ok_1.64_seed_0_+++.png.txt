@@ -1,0 +1,27 @@
+Problem Id: b402f1b8-6028-46b4-9544-20c206b116a5
+Solution:
+[[0. 0. 0. 1. 0. 1. 0. 0. 0.]
+ [0. 0. 0. 1. 0. 0. 0. 0. 1.]
+ [0. 0. 0. 0. 0. 1. 0. 1. 0.]
+ [1. 1. 0. 0. 0. 0. 0. 0. 0.]
+ [0. 0. 0. 0. 0. 0. 1. 0. 1.]
+ [1. 0. 1. 0. 0. 0. 0. 0. 0.]
+ [0. 0. 0. 0. 1. 0. 0. 1. 0.]
+ [0. 0. 1. 0. 0. 0. 1. 0. 0.]
+ [0. 1. 0. 0. 1. 0. 0. 0. 0.]]
+Score: 7.1187498392186
+{0: 0, 1: 0, 2: 1, 3: 0, 4: 1, 5: 0, 6: 0, 7: 0, 8: 0, 9: 1, 10: 0, 11: 0, 12: 0, 13: 0, 14: 1, 15: 0, 16: 0, 17: 1, 18: 0, 19: 1, 20: 0, 21: 0, 22: 0, 23: 0, 24: 0, 25: 0, 26: 0, 27: 1, 28: 0, 29: 1, 30: 0, 31: 0, 32: 0, 33: 1, 34: 0, 35: 0}
+index: 511
+energy: -82.8812501607814
+num_occurrences         : 1
+chain break fraction    : 0.027777777777777776
+max chain strength        : 20.0
+relative chain strength   : 1.0
+chain strength            : 11.0
+annealing time            : 100
+scaling_factor used for M : 1.0
+bias_value used for C     : -2.0
+off_diag_bias used for C  : 1.0
+lagrange_multiplier       : 5.0
+Percentage correct routes : 1.6400000000000001
+Time: 1.6685 s

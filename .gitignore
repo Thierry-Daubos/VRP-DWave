@@ -1,2 +1,5 @@
 
 code/TSP_quantum-solver_test.py
+results/solution_BF-10_cities_0_seed.txt
+results/solution_BF_all-10_cities_0_seed.pkl
+results/solution_BF_all-10_cities_0_seed.txt

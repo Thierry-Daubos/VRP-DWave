@@ -1,0 +1,18 @@
+Best score: 6.680442897584552
+Number of distinct solutions: 1
+Best  route: [0, 3, 5, 2, 7, 6, 1, 8, 4, 0]
+Named route: ['Paris', 'Lille', 'Reims', 'Strasbourg', 'Aix-en-Provence', 'Nimes', 'Nantes', 'Brest', 'Rennes', 'Paris']
+[[0. 0. 0. 1. 1. 0. 0. 0. 0.]
+ [0. 0. 0. 0. 0. 0. 1. 0. 1.]
+ [0. 0. 0. 0. 0. 1. 0. 1. 0.]
+ [1. 0. 0. 0. 0. 1. 0. 0. 0.]
+ [1. 0. 0. 0. 0. 0. 0. 0. 1.]
+ [0. 0. 1. 1. 0. 0. 0. 0. 0.]
+ [0. 1. 0. 0. 0. 0. 0. 1. 0.]
+ [0. 0. 1. 0. 0. 0. 1. 0. 0.]
+ [0. 1. 0. 0. 1. 0. 0. 0. 0.]]
+Second best score: 6.723632762313372
+Energy difference: -0.04318986472882003
+Computation time: 1.2281 s
+Mean computation time: 0.9909 s
+Std  computation time: 0.2367 s
