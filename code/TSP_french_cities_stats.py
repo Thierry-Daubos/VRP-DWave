@@ -19,14 +19,15 @@ import matplotlib.patches as mpatches
 import networkx as nx
 import networkx.algorithms.approximation as nx_app
 
-from IPython import get_ipython
 from datetime import datetime
+from IPython import get_ipython
 from mpl_toolkits.basemap import Basemap as Basemap
 from geopy.geocoders import Nominatim
 from sklearn.preprocessing import MinMaxScaler
 
 import dwave.inspector
 import dwave_networkx as dnx
+from dwave import embedding
 from dwave.embedding.pegasus import find_clique_embedding
 from dwave.embedding.chain_strength import scaled
 from dwave.system import FixedEmbeddingComposite
@@ -76,14 +77,13 @@ def build_objective_matrix(M):
     # Q is the diagonal matrix of biases
     return Q
 
-def build_constraint_matrix(n, bias_value = -2.0, off_diag_bias = 4.0):
+def build_constraint_matrix(n, bias_value = -3.0, off_diag_bias = 1.0):
     """
      The constraints matrix encodes the constraint that each city (node) is connected to exactly two other cities in the output cycle        
     """
     m          = int(n*(n-1)/2)
     C          = np.zeros((m,m))
     for i in range(0, n):
-        
         # Diagonal terms of C are equal to 2 * bias_value
         for j in range(0, n):
             if i == j:
@@ -289,7 +289,7 @@ max_lat = max(lats)+ offset
 # Define problem's meta parameters
 '''
 global Nb_cities
-Nb_cities      = 11
+Nb_cities      = 5
 
 # Seed value used for ramdomly selecting the cities
 Seed_city      = 0
@@ -298,18 +298,15 @@ Seed_city      = 0
 scaling_factor = 1.0
 
 # Bias value used to build the constraint matrix
-# bias_value     = -2.0
-# off_diag_bias  =  1.0
-bias_value     = -1.0
-off_diag_bias  =  2.0
+bias_value     = -2.0
+off_diag_bias  =  1.0
 
 # Lagrange multiplier for taking into account the constraint matrix
 # lagrange_multiplier = np.max(np.abs(df))
-# lagrange_multiplier = 5.0
-lagrange_multiplier = 3.038346244970316
+lagrange_multiplier = 5.0
 
 # Number of measurements repetition (up to 10000)
-num_samples    = 100
+num_samples    = 1000
 
 # Sets annealing duration per sample in microseconds (up to 2000)
 annealing_time = 100 
@@ -428,48 +425,44 @@ m               = 4
 # num_variables = n_nodes or num_variables = (n_nodes * (n_nodes)-1) / 2 (i.e. number of edges in the clique)
 num_variables   = 36
 
-''' Tests for finding an embbing of NetworkX graph in Pegazus graph '''
-# Pegasus           = dnx.pegasus_graph(m, nice_coordinates = True)
-Pegasus           = dnx.pegasus_graph(m, nice_coordinates = False)
+''' Find an embbing of NetworkX graph in Pegazus graph '''
+Pegasus           = dnx.pegasus_graph(m, nice_coordinates = True)
+# Pegasus           = dnx.pegasus_graph(m, nice_coordinates = False)
 
 # fig, ax = plt.subplots()
 # fig.set_size_inches(20, 20)
 # dnx.draw_pegasus(Pegasus)
 # plt.show()
 
-# # Creates Pegasus embedding from the clique corresponding to the number of nodes in graph G_embedding
-# embedding1 = dwave.embedding.pegasus.find_clique_embedding(G_embedding, m)
-# print("Embedding pegasus.find_clique_embedding (Nodes) : \n", embedding1)
-# print("Max chain length : \n", max(len(chain) for chain in embedding1.values()))
+# Creates Pegasus embedding from the clique corresponding to the number of nodes in graph G_embedding
+# embedding1 = dwave.embedding.pegasus.find_clique_embedding(G_embedding, m) <= Equivalent to line below
+embedding1 = dwave.embedding.pegasus.find_clique_embedding(Nb_cities, m)
+print("Embedding pegasus.find_clique_embedding (Nodes) : \n", embedding1)
+print("Max chain length : \n", max(len(chain) for chain in embedding1.values()))
 
-# # Creates Pegasus embedding from the edges list of graph G_embedding
-# embedding2 = dwave.embedding.pegasus.find_clique_embedding(num_variables, m)
-# print("Embedding pegasus.find_clique_embedding (Var) : \n", embedding2)
-# print("Max chain length : \n", max(len(chain) for chain in embedding2.values()))
+# Creates Pegasus embedding using minorminer from the NetworkX graph G_embedding
+random_seed          = 0
+# Maximum number of failed iterations to improve the current solution, where each iteration attempts to find an embedding
+max_no_improvement   = 10
+# Number of restart attempts before the algorithm stops.
+tries                = 10
+# Maximum number of failed iterations to improve chain lengths in the current solution
+# Each iteration attempts to find an embedding for each variable of S such that it is adjacent to all its neighbours.
+chainlength_patience = 10
 
-# # Creates Pegasus embedding using minorminer from the NetworkX graph G_embedding
-# random_seed          = 0
-# # Maximum number of failed iterations to improve the current solution, where each iteration attempts to find an embedding
-# max_no_improvement   = 10
-# # Number of restart attempts before the algorithm stops.
-# tries                = 10
-# # Maximum number of failed iterations to improve chain lengths in the current solution
-# # Each iteration attempts to find an embedding for each variable of S such that it is adjacent to all its neighbours.
-# chainlength_patience = 10
+embedding3 = find_embedding(G_embedding, Pegasus, random_seed = random_seed, max_no_improvement = max_no_improvement, tries = tries, chainlength_patience = chainlength_patience, verbose = 1)
+print("Embedding minorminer find_embedding : \n", embedding3)
+print("Max chain length : \n", max(len(chain) for chain in embedding3.values()))
 
-# embedding3 = find_embedding(G_embedding, Pegasus, random_seed = random_seed, max_no_improvement = max_no_improvement, tries = tries, chainlength_patience = chainlength_patience, verbose = 1)
-# print("Embedding minorminer find_embedding : \n", embedding3)
-# print("Max chain length : \n", max(len(chain) for chain in embedding3.values()))
+embedding4 = busclique.find_clique_embedding(n_nodes, Pegasus)
+print("Embedding minorminer busclique.find_clique_embedding : \n", embedding4)
+print("Max chain length : \n", max(len(chain) for chain in embedding4.values()))
 
-# embedding4 = busclique.find_clique_embedding(n_nodes, Pegasus)
-# print("Embedding minorminer busclique.find_clique_embedding : \n", embedding4)
-# print("Max chain length : \n", max(len(chain) for chain in embedding4.values()))
+embedding5 = find_clique_embedding(n_nodes, m)
+print("Embedding find_clique_embedding : \n", embedding5)
+print("Max chain length : \n", max(len(chain) for chain in embedding5.values()))
 
-# embedding5 = find_clique_embedding(n_nodes, m)
-# print("Embedding find_clique_embedding : \n", embedding5)
-# print("Max chain length : \n", max(len(chain) for chain in embedding5.values()))
-
-'''# Gain more control on the minor embedding process using code below ?'''
+# Gain more control on the minor embedding process using code below ?
 
 # sampler_auto = EmbeddingComposite(DWaveSampler(solver={'topology__type': 'chimera'}))
 # linear       = {('a', 'a'): -1, ('b', 'b'): -1, ('c', 'c'): -1}
@@ -493,18 +486,10 @@ Pegasus           = dnx.pegasus_graph(m, nice_coordinates = False)
 
 # Check embedding using the "exact solver" on Ocean API
 
+
 '''
 *** Run the problem on the QPU recording execution times
 '''
-have_solution = False
-
-path             = "D:/Documents/Scalian/Quantum_Computing_2022/VRP-DWave/results/"
-name_BF_all      = "solution_BF_all-cities_"      + str(Nb_cities) + "_seed_" + str(Seed_city)
-name_BF_spec     = "solution_BF_spectrum_cities_" + str(Nb_cities) + "_seed_" + str(Seed_city)
-ext1             = ".txt"
-ext2             = ".png"
-
-out_file_BF_spec = path + name_BF_spec + ext2
 
 if COMPUTE_QUANTUM:
     max_chain_strength  = np.ceil(np.max(np.abs(qubo)))
@@ -548,121 +533,127 @@ if COMPUTE_QUANTUM:
     # sampler   = LazyFixedEmbeddingComposite(qpu, find_embedding = find_embedding, embedding_parameters = None)
     sampler   = EmbeddingComposite(qpu)
     
-    ''' !! Sampling with this sampler uses lots of computation time **EVEN DEFINING THE SAMPLER** !!
-    # D-Wave’s virtual graphs feature can require many seconds of D-Wave system time 
-    # to calibrate qubits to compensate for the effects of biases. 
-    # If your account has limited D-Wave system access, consider using FixedEmbeddingComposite instead.
-    #
-    # sampler   = VirtualGraphComposite(qpu, embedding = embedding_qubo, chain_strength = chain_strength)
-    # sampler   = VirtualGraphComposite(qpu, embedding = embedding_qubo)
     '''
-        
-    # Use classical sampler
-    # classical_sampler = neal.SimulatedAnnealingSampler()
-    # sampler           = dimod.StructureComposite(classical_sampler, Pegasus.nodes, Pegasus.edges)
-    # print("Sampler properties : ", sampler.properties)
-
-    t0 = time.perf_counter()
-    sampleset = sampler.sample_qubo(qubo, num_reads = num_samples, chain_strength = chain_strength, annealing_time = annealing_time)
-    t1 = time.perf_counter()
+    *** Repeat Quantum experience N times for statistics
+    '''
+    N_exp = 1
     
-    '''
-    *** Show solution results and compute metrics ***
-    '''
-    # print(sampleset)
-    # print(sampleset.info.keys())
-    # print(sampleset.info["timing"])
-    print(sampleset.info["embedding_context"])
-    embedding_qubo = (sampleset.info["embedding_context"])["embedding"]
-    print("Max chain length   : \n", max(len(chain) for chain in embedding_qubo.values()))
-
-    dwave.inspector.show(sampleset)    
-    problem_id         = sampleset.info['problem_id']
-    chain_strength     = sampleset.info['embedding_context']['chain_strength']
-    Q_correct_solution = list()
-    Total_correc       = 0
-    count              = 0
-
-    for e in sampleset.data(sorted_by='energy', sample_dict_cast = False):
-        X = build_solution(e.sample)
+    for repeat in range(N_exp):
         
-        if is_valid_solution(X) and not have_solution:
-            have_solution             = True
-            best_score_quantum        = compute_score(M, X)
-            solution_best             = X
-            sample_best               = e.sample
-            count_best                = count
-            energy_best               = e.energy
-            num_cocurrences_best      = e.num_occurrences
-            chain_break_fraction_best = e.chain_break_fraction
-                       
-        if is_valid_solution(X): 
-            Q_route = decode_route(X)
-            score   = compute_score(M, X)
-            for i in range(e.num_occurrences):
-                Q_sol = {'route': Q_route, 'score Quantum': score, 'energie': e.energy, "solution": X, "chain_break_fraction": e.chain_break_fraction}
-                Q_correct_solution.append(Q_sol)
-            Total_correc += e.num_occurrences
-        count += 1
+        have_solution = False
         
-    Percentage_correct_routes = round((Total_correc/num_samples)*100., 3)
+        t0 = time.perf_counter()
+        # sampleset = sampler.sample_qubo(qubo, num_reads = num_samples, chain_strength = chain_strength, annealing_time = annealing_time)
+        sampleset = sampler.sample_qubo(qubo, num_reads = num_samples, annealing_time = annealing_time)
+        t1 = time.perf_counter()
+    
+        '''
+        *** Show solution results and compute metrics ***
+        '''
+        # print(sampleset)
+        # print(sampleset.info.keys())
+        # print(sampleset.info["timing"])
+        print(sampleset.info["embedding_context"])
+        embedding_qubo = (sampleset.info["embedding_context"])["embedding"]
+        print("Max chain length   : \n", max(len(chain) for chain in embedding_qubo.values()))
+    
+        # dwave.inspector.show(sampleset)    
+        problem_id         = sampleset.info['problem_id']
+        chain_strength     = sampleset.info['embedding_context']['chain_strength']
+        Q_correct_solution = list()
+        Total_correc       = 0
+        count              = 0
+    
+        for e in sampleset.data(sorted_by='energy', sample_dict_cast = False):
+            X = build_solution(e.sample)
+            
+            if is_valid_solution(X) and not have_solution:
+                have_solution             = True
+                best_score_quantum        = compute_score(M, X)
+                solution_best             = X
+                sample_best               = e.sample
+                count_best                = count
+                energy_best               = e.energy
+                num_cocurrences_best      = e.num_occurrences
+                chain_break_fraction_best = e.chain_break_fraction
+                           
+            if is_valid_solution(X): 
+                Q_route = decode_route(X)
+                score   = compute_score(M, X)
+                for i in range(e.num_occurrences):
+                    Q_sol = {'route': Q_route, 'score Quantum': score, 'energie': e.energy, "solution": X, "chain_break_fraction": e.chain_break_fraction}
+                    Q_correct_solution.append(Q_sol)
+                Total_correc += e.num_occurrences
+            count += 1
+            
+        Percentage_correct_routes = round((Total_correc/num_samples)*100., 3)
 
-    '''
-    Save quantum results to file
-    '''
-    name_quantum     = "solution_quantum-cities_" + str(Nb_cities)\
-                     + "_seed_"     + str(Seed_city) \
-                     + "_scal_"     + str(scaling_factor) \
-                     + "_bias_"     + str(bias_value) \
-                     + "_off_diag_" + str(off_diag_bias) \
-                     + "_lag_"      + str(lagrange_multiplier) \
-                     + "_chain_"    + str(chain_strength) \
-                     + "_RCS_"      + str(RCS) \
-                     + "_AT_"       + str(annealing_time) \
-                     + "_ok_"       + str(Percentage_correct_routes)
+        '''
+        Save quantum results to file
+        '''
+        path             = "D:/Documents/Scalian/Quantum_Computing_2022/VRP-DWave/results/"
+        name_quantum     = "solution_quantum-cities_" + str(Nb_cities)\
+                         + "_repeat_"   + str(repeat) \
+                         + "_seed_"     + str(Seed_city) \
+                         + "_scal_"     + str(scaling_factor) \
+                         + "_bias_"     + str(bias_value) \
+                         + "_off_diag_" + str(off_diag_bias) \
+                         + "_lag_"      + str(lagrange_multiplier) \
+                         + "_chain_"    + str(chain_strength) \
+                         + "_RCS_"      + str(RCS) \
+                         + "_AT_"       + str(annealing_time) \
+                         + "_ok_"       + str(Percentage_correct_routes)
                      
-    name_BF          = "solution_BF-cities_"          + str(Nb_cities) + "_seed_" + str(Seed_city)
+        name_BF          = "solution_BF-cities_"          + str(Nb_cities) + "_seed_" + str(Seed_city)
+        name_BF_all      = "solution_BF_all-cities_"      + str(Nb_cities) + "_seed_" + str(Seed_city)
+        name_BF_spec     = "solution_BF_spectrum_cities_" + str(Nb_cities) + "_seed_" + str(Seed_city)
     
-    out_file_Quantum = path + name_quantum + ext1
+        ext1             = ".txt"
+        out_file_Quantum = path + name_quantum + ext1
+        
+        ext2             = ".png"   
+        out_file_BF_spec = path + name_BF_spec + ext2
     
-    with open(out_file_Quantum, 'w') as f:  
-        f.write(f"Problem Id: {problem_id}\n") # does not depend on sample
-        
-        if have_solution:
-            f.write("solution:\n")
-            f.write(f"{solution_best}\n")
-            f.write(f"score quantum             : {best_score_quantum}\n")
-            f.write(f"sample best               : \n {sample_best}\n")
-            f.write(f"index                     : {count_best}\n")
-            f.write(f"energy                    : {energy_best}\n")
-            f.write(f"num_occurrences           : {num_cocurrences_best}\n")            
-            f.write(f"chain break fraction      : {chain_break_fraction_best}\n")
-            f.write(f"max chain strength        : {max_chain_strength}\n")
-            f.write(f"relative chain strength   : {RCS}\n")
-            f.write(f"chain strength            : {chain_strength}\n")
-            f.write(f"annealing time            : {annealing_time}\n")
-            f.write(f"scaling_factor used for M : {scaling_factor}\n")
-            f.write(f"bias_value used for C     : {bias_value}\n")
-            f.write(f"off_diag_bias used for C  : {off_diag_bias}\n")
-            f.write(f"lagrange_multiplier       : {lagrange_multiplier}\n")
-            f.write(f"Percentage correct routes : {Percentage_correct_routes}\n")
-            f.write(f"Time                      : {t1-t0:0.4f} s\n")
-        
-        if not have_solution:
-            # https://docs.ocean.dwavesys.com/en/latest/examples/inspector_graph_partitioning.html
-            # this is the overall chain break fraction
-            chain_break_fraction = np.sum(sampleset.record.chain_break_fraction)/num_samples
-            f.write("did not find any solution\n")
-            f.write(f"chain break fraction  : {chain_break_fraction}\n")
+        with open(out_file_Quantum, 'w') as f:  
+            f.write(f"Problem Id: {problem_id}\n") # does not depend on sample
+            
+            if have_solution:
+                f.write("solution:\n")
+                f.write(f"{solution_best}\n")
+                f.write(f"score quantum             : {best_score_quantum}\n")
+                f.write(f"sample best               : \n {sample_best}\n")
+                f.write(f"index                     : {count_best}\n")
+                f.write(f"energy                    : {energy_best}\n")
+                f.write(f"num_occurrences           : {num_cocurrences_best}\n")            
+                f.write(f"chain break fraction      : {chain_break_fraction_best}\n")
+                f.write(f"max chain strength        : {max_chain_strength}\n")
+                f.write(f"relative chain strength   : {RCS}\n")
+                f.write(f"chain strength            : {chain_strength}\n")
+                f.write(f"annealing time            : {annealing_time}\n")
+                f.write(f"scaling_factor used for M : {scaling_factor}\n")
+                f.write(f"bias_value used for C     : {bias_value}\n")
+                f.write(f"off_diag_bias used for C  : {off_diag_bias}\n")
+                f.write(f"lagrange_multiplier       : {lagrange_multiplier}\n")
+                f.write(f"Percentage correct routes : {Percentage_correct_routes}\n")
+                f.write(f"Time                      : {t1-t0:0.4f} s\n")
+            
+            if not have_solution:
+                # https://docs.ocean.dwavesys.com/en/latest/examples/inspector_graph_partitioning.html
+                # this is the overall chain break fraction
+                chain_break_fraction = np.sum(sampleset.record.chain_break_fraction)/num_samples
+                f.write("did not find any solution\n")
+                f.write(f"chain break fraction  : {chain_break_fraction}\n")
 
-if COMPUTE_QUANTUM and have_solution:
-    quantum_route   = decode_route(solution_best)
-    print("Chain break fraction best solution      : ", chain_break_fraction_best)
-    print("Quantum percentage of correct solutions : ", Percentage_correct_routes)
-    print("Quantum computation time                : ", t1-t0)
-    
-    for i, solution in enumerate(Q_correct_solution):
-        print("Route N°",i," : ", solution["route"] , "->", solution["score Quantum"])
+        if COMPUTE_QUANTUM and have_solution:
+            quantum_route   = decode_route(solution_best)
+            print("Repeat N°                               : ", repeat)
+            print("Chain break fraction best solution      : ", chain_break_fraction_best)
+            print("Quantum percentage of correct solutions : ", Percentage_correct_routes)
+            print("Quantum computation time                : ", t1-t0)
+            
+            for i, solution in enumerate(Q_correct_solution):
+                print("Route N°",i," : ", solution["route"] , "->", solution["score Quantum"])
+            print("\n")
 
 ''' Compute problem's solution by brute-force algorithm '''
 
@@ -676,7 +667,7 @@ spec_min = spectrum_brute_force["score BF"].min()
 spec_max = spectrum_brute_force["score BF"].max()
 normalized_spectrum_brute_force = pd.DataFrame((spectrum_brute_force["score BF"] - spec_min) / (spec_max - spec_min))
 
-spectrum_res = 0.005
+spectrum_res = 0.01
 round_digit  = len(str(int(1./spectrum_res)))-1
 spectrum_min = trunc(normalized_spectrum_brute_force.min(), decs = round_digit)
 spectrum_max = trunc(normalized_spectrum_brute_force.max(), decs = round_digit)
@@ -736,7 +727,6 @@ pos = {}
 for i, name in enumerate(city_names):
     pos[i] = (mx[i], my[i])
 
-''' Plot map of optimized routes for each approach '''
 fig, ax = plt.subplots()
 fig.set_size_inches(20, 20)
 
@@ -752,7 +742,6 @@ m.drawcountries( linewidth=1.0, linestyle='solid', color='black'    , antialiase
 m.drawparallels(parallels, labels=[1, 0, 0, 0], fontsize = 10, zorder = 4)
 # Draw meridians
 m.drawmeridians(meridians, labels=[0, 0, 0, 1], fontsize = 10, zorder = 5)
-
 # nodes
 nx.draw_networkx_nodes(G, pos, node_size = 50, node_color = "crimson", label = mapping)
 # edges
@@ -776,92 +765,41 @@ nx.draw_networkx_edge_labels(G, pos, edge_labels, font_size = 8, font_family = "
 # N_inner     = 500
 # Alpha       = 0.005
 
+Temperature = 100
+N_inner     = 100
+Alpha       = 0.01
+
 t4 = time.perf_counter()
 t5 = time.perf_counter()
 cycles_SA = []
 repeat_SA_count = 0
 
-if COMPUTE_QUANTUM:
-    Temperature = 100
-    N_outer     = 10
-    N_inner     = 100
-    Alpha       = 0.01
-    while (t5-t4) <= (t1-t0):
-        cycle    = nx_app.simulated_annealing_tsp(G, init_cycle = "greedy", weight="weight", temp = Temperature, move='1-1', source = 0, max_iterations = N_outer, N_inner = N_inner, alpha = Alpha, seed=None)
-    
-        score_SA  = np.array((spectrum_brute_force["score BF"])[spectrum_brute_force.route.apply(lambda x: x == cycle).values]).astype(float)
-        if len(score_SA) == 0:        
-            reversed_cycle = list(reversed(cycle))
-            score_SA  = np.array((spectrum_brute_force["score BF"])[spectrum_brute_force.route.apply(lambda x: x == reversed_cycle).values]).astype(float)
-    
-            if len(score_SA) == 0:
-                print("reversed SA cycle still not found! \n")
-                named_route = list()
-                for i in reversed_cycle[:-1]:
-                    named_route.append(city_names[i])
-                named_route.append(city_names[0])
-                print(named_route)
-                
-        cycles_SA.append({"cycle": cycle, "score SA": score_SA[0]})       
-        repeat_SA_count += 1
-        t5 = time.perf_counter()
-else:
-    # Sigle execution if not comparing with quantum annealing
-    Temperature = 100
-    N_outer     = 10
-    N_inner     = 100
-    Alpha       = 0.01
+while (t5-t4) <= (t1-t0):
+    seed = datetime.now().timestamp()
+    cycle     = nx_app.simulated_annealing_tsp(G, init_cycle = "greedy", weight="weight", temp = Temperature, move='1-1', source = 0, max_iterations = 10, N_inner = N_inner, alpha = Alpha, seed=None)
+    score_SA  = np.array((spectrum_brute_force["score BF"])[spectrum_brute_force.route.apply(lambda x: x == cycle).values]).astype(float)
 
-    '''
-    *** Repeat SA experience N times for statistics
-    '''
-    N_exp   = 10
-    SA_timings    = list()
-    SA_scores     = list()
-    best_score_SA = np.inf
-    best_route_SA = list()
-    for repeat in range(N_exp):
-        t4        = time.perf_counter()
-        seed      = datetime.now().timestamp()
-        cycle     = nx_app.simulated_annealing_tsp(G, init_cycle = "greedy", weight="weight", temp = Temperature, move='1-1', source = 0, max_iterations = N_outer, N_inner = N_inner, alpha = Alpha, seed=None)    
-        score_SA  = np.array((spectrum_brute_force["score BF"])[spectrum_brute_force.route.apply(lambda x: x == cycle).values]).astype(float)
+    if len(score_SA) == 0:        
+        reversed_cycle = list(reversed(cycle))
+        score_SA  = np.array((spectrum_brute_force["score BF"])[spectrum_brute_force.route.apply(lambda x: x == reversed_cycle).values]).astype(float)
 
-        if len(score_SA) == 0:        
-            reversed_cycle = list(reversed(cycle))
-            score_SA  = np.array((spectrum_brute_force["score BF"])[spectrum_brute_force.route.apply(lambda x: x == reversed_cycle).values]).astype(float)
-    
-            if len(score_SA) == 0:
-                print("reversed SA cycle still not found! \n")    
-                named_route = list()
-                for i in reversed_cycle[:-1]:
-                    named_route.append(city_names[i])
-                named_route.append(city_names[0])
-        else:
-                named_route = list()
-                for i in cycle[:-1]:
-                    named_route.append(city_names[i])
-                named_route.append(city_names[0])
-                
-        print(named_route)
-        cycles_SA.append({"cycle": cycle, "score SA": score_SA[0]})       
-        repeat_SA_count += 1
-        t5 = time.perf_counter()
-        SA_timings.append(t5-t4)
-        SA_scores.append(score_SA)
-        if score_SA < best_score_SA:
-            best_score_SA = score_SA
-            best_route_SA = named_route
-        
-        print("Simulated Annealing computation time : ", t5-t4, " (", repeat_SA_count, " repeats)")
-    
-    SA_timings = np.array(SA_timings)
-    SA_scores  = np.array(SA_scores)
-    print("Nb iteration SA                         :", N_exp)
-    print("Mean computation time                   :", np.mean(SA_timings))
-    print("Std  computation time                   :", np.std(SA_timings))    
-    print("Mean score SA                           :", np.mean(SA_scores))
-    print("Std  score SA                           :", np.std(SA_scores))
-    print("Best route SA                           :\n", best_route_SA)    
+        if len(score_SA) == 0:
+            print("reversed SA cycle still not found! \n")
+            named_route = list()
+            for i in reversed_cycle[:-1]:
+                named_route.append(city_names[i])
+            named_route.append(city_names[0])
+            print(named_route)
+    else:
+            named_route = list()
+            for i in cycle[:-1]:
+                named_route.append(city_names[i])
+            named_route.append(city_names[0])
+            print(named_route)
+             
+    cycles_SA.append({"cycle": cycle, "score SA": score_SA[0]})       
+    repeat_SA_count += 1
+    t5 = time.perf_counter()
 
 cycles_SA_pd = pd.DataFrame(cycles_SA)
 best_SA      = cycles_SA_pd.iloc[cycles_SA_pd["score SA"].idxmin()]
@@ -871,6 +809,7 @@ best_SA_cycle = best_SA["cycle"]
 if COMPUTE_QUANTUM and have_solution:
     print("Quantum computation time             : ", t1-t0)
 
+print("Simulated Annealing computation time : ", t5-t4, " (", repeat_SA_count, " repeats)")
     
 spectrum_SA = pd.DataFrame (cycles_SA, columns = ["cycle","score SA"])
 
@@ -936,16 +875,14 @@ if COMPUTE_QUANTUM:
     spectrum_Qantum = pd.DataFrame(Q_correct_solution, columns = ["score Quantum", "solution"])
     normalized_spectrum_Qantum = pd.DataFrame((spectrum_Qantum["score Quantum"] - spec_min) / (spec_max - spec_min))
 
-''' Plot spretra difference for each approach '''
-
 fig.savefig(out_file_BF_spec)
 plt.show()
 fig, ax = plt.subplots(1, 1, figsize=(20, 15))
 
 # Binerize the distributions
 n_brute_force, bin_edges    = np.histogram(normalized_spectrum_brute_force["score BF"], bins = nb_bin, range=(0., 1.0))
-# bin_probability_brute_force = n_brute_force /float(n_brute_force.sum())
-bin_probability_brute_force = n_brute_force /float(n_brute_force.max())
+bin_probability_brute_force = n_brute_force /float(n_brute_force.sum())
+# bin_probability_brute_force = n_brute_force /float(n_brute_force.max())
 
 n_SA         , _            = np.histogram(normalized_spectrum_SA["score SA"]         , bins = nb_bin, range=(0., 1.0))
 bin_probability_SA          = n_SA /float(n_SA.sum())

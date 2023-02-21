@@ -289,7 +289,7 @@ max_lat = max(lats)+ offset
 # Define problem's meta parameters
 '''
 global Nb_cities
-Nb_cities      = 11
+Nb_cities      = 10
 
 # Seed value used for ramdomly selecting the cities
 Seed_city      = 0
@@ -327,6 +327,7 @@ RCS            = 1.0
 
 random.seed(Seed_city)
 cities_keep    = random.sample(city_names, Nb_cities)
+# cities_keep    = ['Paris', 'Lille', 'Aix-en-Provence', 'Nimes']
 cities_removed = copy.deepcopy(city_names)
 
 for city in cities_keep:
@@ -417,10 +418,15 @@ G_embedding.name = "Graph of " + str(n_nodes) + " french cities"
 # Calculating the distances between the nodes as edge's weight.
 for i in city_index:
     for j in range(i+1, n_nodes):
-        G_embedding.add_edge(i, j, weight=int(df[i][j]))
+        G_embedding.add_edge(i, j, weight=df[i][j])
 
 print("G_embedding ", len(list(G_embedding.nodes)), "Nodes: \n", list(G_embedding.nodes))
 print("G_embedding ", len(list(G_embedding.edges)), "Edges: \n", list(G_embedding.edges))
+for node in G_embedding.nodes:
+    print(node,"->", G_embedding.nodes[node])
+
+for edge in G_embedding.edges:
+    print(edge,"->", G_embedding.edges[edge])
 
 ''' Find Pegasus embedding using find_clique_embedding function '''
 # m (int) – Number of tiles in a row of a square Pegasus graph. Required to generate an m-by-m Pegasus graph when target_graph is None.
@@ -430,7 +436,7 @@ num_variables   = 36
 
 ''' Tests for finding an embbing of NetworkX graph in Pegazus graph '''
 # Pegasus           = dnx.pegasus_graph(m, nice_coordinates = True)
-Pegasus           = dnx.pegasus_graph(m, nice_coordinates = False)
+# Pegasus           = dnx.pegasus_graph(m, nice_coordinates = False)
 
 # fig, ax = plt.subplots()
 # fig.set_size_inches(20, 20)
@@ -499,12 +505,16 @@ Pegasus           = dnx.pegasus_graph(m, nice_coordinates = False)
 have_solution = False
 
 path             = "D:/Documents/Scalian/Quantum_Computing_2022/VRP-DWave/results/"
-name_BF_all      = "solution_BF_all-cities_"      + str(Nb_cities) + "_seed_" + str(Seed_city)
-name_BF_spec     = "solution_BF_spectrum_cities_" + str(Nb_cities) + "_seed_" + str(Seed_city)
+# name_BF_all      = "solution_SA_all-cities_"      + str(Nb_cities) + "_seed_" + str(Seed_city)
+# name_BF_spec     = "solution_SA_spectrum_cities_" + str(Nb_cities) + "_seed_" + str(Seed_city)
+name_SA_all      = "solution_SA_all-cities_"      + str(Nb_cities) + "_seed_" + str(Seed_city)
+name_SA_spec     = "solution_SA_spectrum_cities_" + str(Nb_cities) + "_seed_" + str(Seed_city)
+name_SA_map      = "solution_SA_map_cities_"      + str(Nb_cities) + "_seed_" + str(Seed_city)
 ext1             = ".txt"
 ext2             = ".png"
 
-out_file_BF_spec = path + name_BF_spec + ext2
+out_file_SA_spec = path + name_SA_spec + ext2
+out_file_SA_map  = path + name_SA_map  + ext2
 
 if COMPUTE_QUANTUM:
     max_chain_strength  = np.ceil(np.max(np.abs(qubo)))
@@ -671,12 +681,13 @@ name_BF_all_pkl      = "solution_BF_all-cities_"      + str(Nb_cities) + "_seed_
 ext                  = ".pkl"
 in_file_BF_all_pkl   = path + name_BF_all_pkl + ext
 spectrum_brute_force = pd.read_pickle(in_file_BF_all_pkl)
+spectrum_brute_force.reset_index(drop=True, inplace=True)
 
 spec_min = spectrum_brute_force["score BF"].min()
 spec_max = spectrum_brute_force["score BF"].max()
 normalized_spectrum_brute_force = pd.DataFrame((spectrum_brute_force["score BF"] - spec_min) / (spec_max - spec_min))
 
-spectrum_res = 0.005
+spectrum_res = 0.01
 round_digit  = len(str(int(1./spectrum_res)))-1
 spectrum_min = trunc(normalized_spectrum_brute_force.min(), decs = round_digit)
 spectrum_max = trunc(normalized_spectrum_brute_force.max(), decs = round_digit)
@@ -787,27 +798,37 @@ if COMPUTE_QUANTUM:
     N_inner     = 100
     Alpha       = 0.01
     while (t5-t4) <= (t1-t0):
-        cycle    = nx_app.simulated_annealing_tsp(G, init_cycle = "greedy", weight="weight", temp = Temperature, move='1-1', source = 0, max_iterations = N_outer, N_inner = N_inner, alpha = Alpha, seed=None)
-    
+        seed      = int(random.random()*10000)
+        cycle     = nx_app.simulated_annealing_tsp(G_embedding, init_cycle = "greedy", weight="weight", temp = Temperature, move='1-1', source = Seed_city, max_iterations = N_outer, N_inner = N_inner, alpha = Alpha, seed=seed)    
         score_SA  = np.array((spectrum_brute_force["score BF"])[spectrum_brute_force.route.apply(lambda x: x == cycle).values]).astype(float)
+
         if len(score_SA) == 0:        
-            reversed_cycle = list(reversed(cycle))
-            score_SA  = np.array((spectrum_brute_force["score BF"])[spectrum_brute_force.route.apply(lambda x: x == reversed_cycle).values]).astype(float)
-    
+            reversed_cycle     = list(reversed(cycle))
+            score_SA           = np.array((spectrum_brute_force["score BF"])[spectrum_brute_force.route.apply(lambda x: x == reversed_cycle).values]).astype(float)    
             if len(score_SA) == 0:
                 print("reversed SA cycle still not found! \n")
-                named_route = list()
+            else:
+                unscaled_score_SA  = np.array((spectrum_brute_force["unscaled_score BF"])[spectrum_brute_force.route.apply(lambda x: x == reversed_cycle).values]).astype(float)
+                rank_score_SA      = np.array((spectrum_brute_force.index)[spectrum_brute_force.route.apply(lambda x: x == reversed_cycle).values]).astype(int)
+                named_route = list()                
                 for i in reversed_cycle[:-1]:
                     named_route.append(city_names[i])
-                named_route.append(city_names[0])
-                print(named_route)
+                named_route.append(city_names[0])           
+                cycles_SA.append({"cycle": reversed_cycle, "score SA": score_SA[0]})       
+
+        else:
+            unscaled_score_SA  = np.array((spectrum_brute_force["unscaled_score BF"])[spectrum_brute_force.route.apply(lambda x: x == cycle).values]).astype(float)
+            rank_score_SA      = np.array((spectrum_brute_force.index)[spectrum_brute_force.route.apply(lambda x: x == cycle).values]).astype(int)
+            named_route = list()
+            for i in cycle[:-1]:
+                named_route.append(city_names[i])
+            named_route.append(city_names[0])
+            cycles_SA.append({"cycle": cycle, "score SA": score_SA[0]})       
                 
-        cycles_SA.append({"cycle": cycle, "score SA": score_SA[0]})       
         repeat_SA_count += 1
         t5 = time.perf_counter()
 else:
-    # Sigle execution if not comparing with quantum annealing
-    Temperature = 100
+    Temperature = 100.0
     N_outer     = 10
     N_inner     = 100
     Alpha       = 0.01
@@ -815,53 +836,67 @@ else:
     '''
     *** Repeat SA experience N times for statistics
     '''
-    N_exp   = 10
-    SA_timings    = list()
-    SA_scores     = list()
-    best_score_SA = np.inf
-    best_route_SA = list()
+    N_exp   = 100
+    SA_timings             = list()
+    SA_scores              = list()
+    best_score_SA          = np.inf
+    best_route_SA          = list()
+    best_unscaled_score_SA = np.inf
+    best_rank_score_SA     = np.inf
+    
+    # print("temp end  :", (Temperature * np.power((1. - Alpha), 0)))
+    # print("temp end  :", (Temperature * np.power((1. - Alpha), N_outer)))
+    # print("prob start:", np.exp(-(4.427922155959766 - 7.41919236401618)/(Temperature * np.power((1. - Alpha), 0))))
+    # print("prob end  :", np.exp(-(4.427922155959766 - 7.41919236401618)/(Temperature * np.power((1. - Alpha), N_outer))))
+    
     for repeat in range(N_exp):
-        t4        = time.perf_counter()
-        seed      = datetime.now().timestamp()
-        cycle     = nx_app.simulated_annealing_tsp(G, init_cycle = "greedy", weight="weight", temp = Temperature, move='1-1', source = 0, max_iterations = N_outer, N_inner = N_inner, alpha = Alpha, seed=None)    
-        score_SA  = np.array((spectrum_brute_force["score BF"])[spectrum_brute_force.route.apply(lambda x: x == cycle).values]).astype(float)
+        t4                 = time.perf_counter()
+        seed               = int(random.random()*10000)
+        cycle              = nx_app.simulated_annealing_tsp(G_embedding, init_cycle = "greedy", weight="weight", temp = Temperature, move='1-1', source = Seed_city, max_iterations = N_outer, N_inner = N_inner, alpha = Alpha, seed=seed)    
+        # cycle              = nx_app.simulated_annealing_tsp(G_embedding, init_cycle = init_cycle, weight="weight", temp = Temperature, move='1-1', source = Seed_city, max_iterations = N_outer, N_inner = N_inner, alpha = Alpha, seed=seed)
+        # cycle              = nx_app.simulated_annealing_tsp(G_embedding, init_cycle = init_cycle, weight="weight", temp = Temperature, move="1-0", source = Seed_city, max_iterations = N_outer, N_inner = N_inner, alpha = Alpha, seed=seed) 
+        t5                 = time.perf_counter()
+
+        score_SA           = np.array((spectrum_brute_force["score BF"])[spectrum_brute_force.route.apply(lambda x: x == cycle).values]).astype(float)
 
         if len(score_SA) == 0:        
-            reversed_cycle = list(reversed(cycle))
-            score_SA  = np.array((spectrum_brute_force["score BF"])[spectrum_brute_force.route.apply(lambda x: x == reversed_cycle).values]).astype(float)
-    
+            reversed_cycle     = list(reversed(cycle))
+            score_SA           = np.array((spectrum_brute_force["score BF"])[spectrum_brute_force.route.apply(lambda x: x == reversed_cycle).values]).astype(float)    
             if len(score_SA) == 0:
-                print("reversed SA cycle still not found! \n")    
-                named_route = list()
+                print("reversed SA cycle still not found! \n")
+            else:
+                unscaled_score_SA  = np.array((spectrum_brute_force["unscaled_score BF"])[spectrum_brute_force.route.apply(lambda x: x == reversed_cycle).values]).astype(float)
+                rank_score_SA      = np.array((spectrum_brute_force.index)[spectrum_brute_force.route.apply(lambda x: x == reversed_cycle).values]).astype(int)
+                named_route = list()                
                 for i in reversed_cycle[:-1]:
                     named_route.append(city_names[i])
                 named_route.append(city_names[0])
-        else:
-                named_route = list()
-                for i in cycle[:-1]:
-                    named_route.append(city_names[i])
-                named_route.append(city_names[0])
                 
-        print(named_route)
-        cycles_SA.append({"cycle": cycle, "score SA": score_SA[0]})       
+                cycles_SA.append({"cycle": reversed_cycle, "score SA": score_SA[0]})       
+                # print("repeat: *", repeat, " cycle:", reversed_cycle, "score SA:", score_SA[0])
+        else:
+            unscaled_score_SA  = np.array((spectrum_brute_force["unscaled_score BF"])[spectrum_brute_force.route.apply(lambda x: x == cycle).values]).astype(float)
+            rank_score_SA      = np.array((spectrum_brute_force.index)[spectrum_brute_force.route.apply(lambda x: x == cycle).values]).astype(int)
+            named_route = list()
+            for i in cycle[:-1]:
+                named_route.append(city_names[i])
+            named_route.append(city_names[0])
+            cycles_SA.append({"cycle": cycle, "score SA": score_SA[0]})       
+            # print("repeat  :", repeat, " cycle:", cycle, "score SA:", score_SA[0])
+                
+        # print(named_route)
         repeat_SA_count += 1
-        t5 = time.perf_counter()
         SA_timings.append(t5-t4)
         SA_scores.append(score_SA)
-        if score_SA < best_score_SA:
-            best_score_SA = score_SA
-            best_route_SA = named_route
-        
-        print("Simulated Annealing computation time : ", t5-t4, " (", repeat_SA_count, " repeats)")
+        if score_SA <= best_score_SA:
+            best_score_SA          = score_SA
+            best_route_SA          = named_route
+            best_unscaled_score_SA = unscaled_score_SA
+            best_rank_score_SA     = rank_score_SA  
+        # print("Simulated Annealing computation time : ", t5-t4, " (", repeat, " repeats)")
     
     SA_timings = np.array(SA_timings)
     SA_scores  = np.array(SA_scores)
-    print("Nb iteration SA                         :", N_exp)
-    print("Mean computation time                   :", np.mean(SA_timings))
-    print("Std  computation time                   :", np.std(SA_timings))    
-    print("Mean score SA                           :", np.mean(SA_scores))
-    print("Std  score SA                           :", np.std(SA_scores))
-    print("Best route SA                           :\n", best_route_SA)    
 
 cycles_SA_pd = pd.DataFrame(cycles_SA)
 best_SA      = cycles_SA_pd.iloc[cycles_SA_pd["score SA"].idxmin()]
@@ -898,13 +933,23 @@ if COMPUTE_QUANTUM and have_solution:
 print("The brute-force route score is : ", best_score_BF)
 for i in BF_route[:-1]:
     print(city_names[i], " -> ", end = '')
-print(city_names[0])
+print(city_names[0],"\n")
 
-print("The Simulated Annealing route score is : ", best_SA_score)
+print("\nOver", N_exp,"SA repeats :")
 for i in best_SA_cycle[:-1]:
     print(city_names[i], " -> ", end = '')
 print(city_names[0])
-    
+
+print("The Simulated Annealing route score is : ", best_SA_score)
+print("The best SA unscaled route score is    : ", float(best_unscaled_score_SA))
+print("The best SA rank route score is        : ", int(best_rank_score_SA))
+print("Error Best SA route                    : ", np.round(((best_SA_score - best_score_BF) /best_score_BF * 100.), 2),"%")    
+print("Mean score SA                          : ", np.round(np.mean(SA_scores),4))
+print("Std  score SA                          : ", np.round(np.std(SA_scores) ,4))
+print("Error Mean SA route                    : ", np.round(((np.mean(SA_scores) - best_score_BF) /best_score_BF * 100.), 2),"%")
+print("Mean computation time                  : ", np.round(np.mean(SA_timings),4))
+print("Std  computation time                  : ", np.round(np.std(SA_timings) ,4))    
+
 # Draw the routes
 nx.draw_networkx_nodes(G, pos, nodelist = [0], node_size = 100, node_color = "gold", label = mapping)
 
@@ -938,8 +983,9 @@ if COMPUTE_QUANTUM:
 
 ''' Plot spretra difference for each approach '''
 
-fig.savefig(out_file_BF_spec)
 plt.show()
+fig.savefig(out_file_SA_map)
+
 fig, ax = plt.subplots(1, 1, figsize=(20, 15))
 
 # Binerize the distributions
@@ -983,3 +1029,4 @@ ax.axvspan(score_BF - bin_width/2., score_BF + bin_width/2., ymin = 0, ymax = 1.
 
 plt.legend(loc='upper right')
 plt.tight_layout()
+fig.savefig(out_file_SA_spec)
